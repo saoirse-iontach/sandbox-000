@@ -171,7 +171,7 @@
       };
       module.exports = {
         standalone: true,
-        http: { public: 'osjs/' }
+        http: { public: './osjs/' }
       };
     /***/ }),
     
