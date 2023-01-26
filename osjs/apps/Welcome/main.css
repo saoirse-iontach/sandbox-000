@@ -1,0 +1,16 @@
+.Window_WelcomeWindow .osjs-window-content {
+  background: #fff;
+  color: #000;
+  padding: 1em; }
+  .Window_WelcomeWindow .osjs-window-content ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0; }
+    .Window_WelcomeWindow .osjs-window-content ul li {
+      margin: 0;
+      padding: 0.5em; }
+  .Window_WelcomeWindow .osjs-window-content div {
+    text-align: center; }
+
+
+/*# sourceMappingURL=main.css.map*/
