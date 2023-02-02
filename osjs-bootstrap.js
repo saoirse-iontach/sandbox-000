@@ -157,65 +157,103 @@
 
 /***/ "./src/client/config.js":
 /***/ (function(module, exports) {
-    module.exports = {
-        // standalone: true,
-        http: { public: 'https://demo.os-js.org' },
-        auth: {
-          login: {
-            username: 'demo',
-            password: 'demo'
-          }
-        },
-        ws: {//uri: '/ws'
-        }
-      };
-      module.exports = {
-        standalone: true,
-        http: { public: location.pathname + 'osjs/' }
-      };
-    /***/ }),
-    
-    /***/ "./src/client/index.js":
-    /***/ (function(module, exports, require) {
-      "use strict";
-      require.r(exports);
-      const require_default = mod => require.n(require(mod)).a;
-      const require_osjs = (mod, type='main') => require(`./node_modules/@osjs/${mod}/dist/${type}.js`);
-    
-      const config = require_default("./src/client/config.js");
-    
-      const osjs_client  = require_osjs("client");
-      const osjs_panels  = require_osjs("panels");
-      const osjs_dialogs = require_osjs("dialogs");
-      const osjs_gui     = require_osjs("gui", "esm");
-      const osjs_widgets = require_osjs("widgets");
-    
-      function init() {
-        var osjs = new osjs_client["Core"](config, {});
-    
-        osjs.register(osjs_client.CoreServiceProvider);
-        osjs.register(osjs_client.DesktopServiceProvider);
-        osjs.register(osjs_client.VFSServiceProvider);
-        osjs.register(osjs_client.NotificationServiceProvider);
-        osjs.register(osjs_client.SettingsServiceProvider, {before: true});
-        osjs.register(osjs_client.AuthServiceProvider, {before: true});
-        osjs.register(osjs_panels.PanelServiceProvider);
-        osjs.register(osjs_dialogs.DialogServiceProvider);
-        osjs.register(osjs_gui.GUIServiceProvider);
-        osjs.register(osjs_widgets.WidgetServiceProvider);
-        osjs.boot();
-      };
-    
-      window.addEventListener('DOMContentLoaded', function () {
-        return init();
-      });
-    /***/ }),
-    
-    /***/ "./src/client/index.scss":
-    /***/ (function(module, exports, require) {
-      "use strict";
-      require.r(exports);
-    /***/ })
-    
-    /******/ });
-    
+  let path = location.pathname;
+  let sidx = path.lastIndexOf('/');
+  let didx = path.lastIndexOf('.');
+  if (sidx < didx) { path = path.substr(0, sidx + 1); }
+  module.exports = {
+    standalone: true,
+    http: { public: path + 'osjs/' },
+  };
+/***/ }),
+
+/***/ "./src/client/index.js":
+/***/ (function(module, exports, require) {
+  "use strict";
+  require.r(exports);
+  const require_default = mod => require.n(require(mod)).a;
+  const require_osjs = (mod, type='main') => require(`./node_modules/@osjs/${mod}/dist/${type}.js`);
+  const require_opt = mod => (mod in require.m) ? require_default(mod) : null;
+
+  /* dependencies */
+  const config = require_default("./src/client/config.js");
+  const packages = [
+    require_osjs("client"),
+    require_osjs("panels"),
+    require_osjs("dialogs"),
+    require_osjs("gui", "esm"),
+    require_osjs("widgets"),
+  ];
+
+  /* some config */
+  class CoreEvents {
+    boot; booted; start; started; destroy;
+    connect; disconnect; "connection-failed";
+    "logged-in"; "logged-out";
+  }
+  class Services { 
+    Core; Desktop; VFS; Notification; Settings; Auth;
+    Panel; Dialog; GUI; Widget;
+  }
+  const servicesOptions = {
+    Auth: {before:true},
+    Settings: {before:true},
+  };
+
+  /* bootstrap */
+  function init() {
+
+    const customConfig = require_opt("osjs-config") || config;
+    const servicesHooks = require_opt("osjs-hooks") || {};
+    const servicesNames = Object.keys(new Services());
+    const eventsNames = Object.keys(new CoreEvents());
+
+    /* Services and hooks */
+    let {provider, options} = {};
+    const find = (sym) => packages.find(pkg => sym in pkg)?.[sym];
+    const hook = (srv) => (servicesHooks[srv] || (o=>o));
+    const get = (type, name = '') => {
+      provider = find(name + type);
+      options = servicesOptions[name];
+      ({provider, options} = hook(name)({provider, options}));
+      return provider;
+    }
+
+    /* Events to dom */
+    const _dispatch = (name, options) => {
+      try { window.dispatchEvent(new CustomEvent(name, options)); }
+      catch (err) { console.error(err); }
+    }
+    const dispatch = (osjs, state) => (...args) => {
+      const options = {detail: {osjs, state, args}};
+      _dispatch("osjs/core", options);
+      _dispatch("osjs/core:" + state, options);
+    }
+
+    /* do bootstrap */
+    const osjs = new (get("Core"))(customConfig, options);
+    for(let evt of eventsNames) {
+      osjs.on("osjs/core:" + evt, dispatch(osjs, evt));
+    }
+    for(let srv of servicesNames) {
+      osjs.register(get("ServiceProvider", srv), options)
+    }
+    osjs.boot();
+  };
+
+  /* schedule */
+  if (document.readyState == "loading") {
+    window.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+/***/ }),
+
+/***/ "./src/client/index.scss":
+/***/ (function(module, exports, require) {
+  "use strict";
+  require.r(exports);
+/***/ })
+
+/******/ });
