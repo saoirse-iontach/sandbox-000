@@ -1,8 +1,10 @@
 ((set)=>Object.defineProperty({}, "exports", {set}))
 ((obj)=>{
     const src = "./dist/metadata.json";
+    const factory = (m) => (m.exports=obj);
+    factory.toString = () => JSON.stringify(obj, null, 2);
     (window["webpackJsonp"] ||= []).push([
-        [src], {[src]:(m)=>(m.exports=obj)}
+        [src], {[src]: factory}
     ]);
 }).exports =
 
@@ -530,4 +532,3 @@
       ]
     }
   ]
-

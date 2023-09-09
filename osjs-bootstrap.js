@@ -1,3 +1,15 @@
+((src) => (factory) => (modules) => {
+  const repl = (k) => k.replace('./src/client/', src + '/');
+  const remapped = Object.fromEntries(
+    Object.entries(modules).map(([k, v]) => [repl(k), v])
+  );
+  remapped[src + '/webpackBootstrap.js'] = factory;
+  (window["webpackJsonp"] ||= []).push([
+      [src], remapped
+  ]);
+  factory(modules);
+})
+("osjs-bootstrap")
 /******/ (function(modules) { // webpackBootstrap
 /******/ 	// install a JSONP callback for chunk loading
 /******/ 	function webpackJsonpCallback(data) {
@@ -157,103 +169,103 @@
 
 /***/ "./src/client/config.js":
 /***/ (function(module, exports) {
-  let path = location.pathname;
-  let sidx = path.lastIndexOf('/');
-  let didx = path.lastIndexOf('.');
-  if (sidx < didx) { path = path.substr(0, sidx + 1); }
-  module.exports = {
-    standalone: true,
-    http: { public: path + 'osjs/' },
-  };
+let path = location.pathname;
+let sidx = path.lastIndexOf('/');
+let didx = path.lastIndexOf('.');
+if (sidx < didx) { path = path.substr(0, sidx + 1); }
+module.exports = {
+  standalone: true,
+  http: { public: path + 'osjs/' },
+};
 /***/ }),
 
 /***/ "./src/client/index.js":
 /***/ (function(module, exports, require) {
-  "use strict";
-  require.r(exports);
-  const require_default = mod => require.n(require(mod)).a;
-  const require_osjs = (mod, type='main') => require(`./node_modules/@osjs/${mod}/dist/${type}.js`);
-  const require_opt = mod => (mod in require.m) ? require_default(mod) : null;
+"use strict";
+require.r(exports);
+const require_default = mod => require.n(require(mod)).a;
+const require_osjs = (mod, type='main') => require(`./node_modules/@osjs/${mod}/dist/${type}.js`);
+const require_opt = mod => (mod in require.m) ? require_default(mod) : null;
 
-  /* dependencies */
-  const config = require_default("./src/client/config.js");
-  const packages = [
-    require_osjs("client"),
-    require_osjs("panels"),
-    require_osjs("dialogs"),
-    require_osjs("gui", "esm"),
-    require_osjs("widgets"),
-  ];
+/* dependencies */
+const config = require_default("./src/client/config.js");
+const packages = [
+  require_osjs("client"),
+  require_osjs("panels"),
+  require_osjs("dialogs"),
+  require_osjs("gui", "esm"),
+  require_osjs("widgets"),
+];
 
-  /* some config */
-  class CoreEvents {
-    boot; booted; start; started; destroy;
-    connect; disconnect; "connection-failed";
-    "logged-in"; "logged-out";
+/* some config */
+class CoreEvents {
+  boot; booted; start; started; destroy;
+  connect; disconnect; "connection-failed";
+  "logged-in"; "logged-out";
+}
+class Services { 
+  Core; Desktop; VFS; Notification; Settings; Auth;
+  Panel; Dialog; GUI; Widget;
+}
+const servicesOptions = {
+  Auth: {before:true},
+  Settings: {before:true},
+};
+
+/* bootstrap */
+function init() {
+
+  const customConfig = require_opt("osjs-config") || config;
+  const servicesHooks = require_opt("osjs-hooks") || {};
+  const servicesNames = Object.keys(new Services());
+  const eventsNames = Object.keys(new CoreEvents());
+
+  /* Services and hooks */
+  let {provider, options} = {};
+  const find = (sym) => packages.find(pkg => sym in pkg)?.[sym];
+  const hook = (srv) => (servicesHooks[srv] || (o=>o));
+  const get = (type, name = '') => {
+    provider = find(name + type);
+    options = servicesOptions[name];
+    ({provider, options} = hook(name)({provider, options}));
+    return provider;
   }
-  class Services { 
-    Core; Desktop; VFS; Notification; Settings; Auth;
-    Panel; Dialog; GUI; Widget;
+
+  /* Events to dom */
+  const _dispatch = (name, options) => {
+    try { window.dispatchEvent(new CustomEvent(name, options)); }
+    catch (err) { console.error(err); }
   }
-  const servicesOptions = {
-    Auth: {before:true},
-    Settings: {before:true},
-  };
-
-  /* bootstrap */
-  function init() {
-
-    const customConfig = require_opt("osjs-config") || config;
-    const servicesHooks = require_opt("osjs-hooks") || {};
-    const servicesNames = Object.keys(new Services());
-    const eventsNames = Object.keys(new CoreEvents());
-
-    /* Services and hooks */
-    let {provider, options} = {};
-    const find = (sym) => packages.find(pkg => sym in pkg)?.[sym];
-    const hook = (srv) => (servicesHooks[srv] || (o=>o));
-    const get = (type, name = '') => {
-      provider = find(name + type);
-      options = servicesOptions[name];
-      ({provider, options} = hook(name)({provider, options}));
-      return provider;
-    }
-
-    /* Events to dom */
-    const _dispatch = (name, options) => {
-      try { window.dispatchEvent(new CustomEvent(name, options)); }
-      catch (err) { console.error(err); }
-    }
-    const dispatch = (osjs, state) => (...args) => {
-      const options = {detail: {osjs, state, args}};
-      _dispatch("osjs/core", options);
-      _dispatch("osjs/core:" + state, options);
-    }
-
-    /* do bootstrap */
-    const osjs = new (get("Core"))(customConfig, options);
-    for(let evt of eventsNames) {
-      osjs.on("osjs/core:" + evt, dispatch(osjs, evt));
-    }
-    for(let srv of servicesNames) {
-      osjs.register(get("ServiceProvider", srv), options)
-    }
-    osjs.boot();
-  };
-
-  /* schedule */
-  if (document.readyState == "loading") {
-    window.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
+  const dispatch = (osjs, state) => (...args) => {
+    const options = {detail: {osjs, state, args}};
+    _dispatch("osjs/core", options);
+    _dispatch("osjs/core:" + state, options);
   }
+
+  /* do bootstrap */
+  const osjs = new (get("Core"))(customConfig, options);
+  for(let evt of eventsNames) {
+    osjs.on("osjs/core:" + evt, dispatch(osjs, evt));
+  }
+  for(let srv of servicesNames) {
+    osjs.register(get("ServiceProvider", srv), options)
+  }
+  osjs.boot();
+};
+
+/* schedule */
+if (document.readyState == "loading") {
+  window.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
 
 /***/ }),
 
 /***/ "./src/client/index.scss":
 /***/ (function(module, exports, require) {
-  "use strict";
-  require.r(exports);
+"use strict";
+require.r(exports);
 /***/ })
 
 /******/ });
