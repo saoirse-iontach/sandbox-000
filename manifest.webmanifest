@@ -2,9 +2,9 @@
   "name": "OS.js-Saoirse-2023.09",
   "short_name": "OS.js",
   "description": "standalone OS.js v2023.09.09",
-  "start_url": "index.html/?utm_source=web_app_manifest",
-  "display": "standalone",
-  "backgroud-color": "rgb(87, 42, 121)",
+  "start_url": "./?utm_source=web_app_manifest",
+  "display": "fullscreen",
+  "backgroud-color": "#572a79",
   "theme-color": "#444e9b",
   "icons": [
     {
@@ -14,12 +14,7 @@
     },
     {
       "src": "favicon.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    },
-    {
-      "src": "logo-splash.png",
-      "sizes": "320x183",
+      "sizes": "128x128 512x512",
       "type": "image/png"
     }
   ]
