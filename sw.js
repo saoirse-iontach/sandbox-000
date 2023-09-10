@@ -45,9 +45,9 @@ if (globalThis === globalThis.window) {
       );
     }
   
-    function fetchHandler({request, respondWith}) {
-      if (cached) respondWith(
-        caches.match(request).then(r => r || fetch(request))
+    function fetchHandler(e) {
+      if (cached) e.respondWith(
+        caches.match(e.request).then(r => r || fetch(e.request))
       );
     }
   }
