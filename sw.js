@@ -1,4 +1,4 @@
-if (globalThis === window) {
+if (globalThis === globalThis.window) {
     // main thread bootstrap
   
     const src = document.currentScript.src;
