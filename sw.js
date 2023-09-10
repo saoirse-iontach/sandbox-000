@@ -40,7 +40,7 @@ if (globalThis === globalThis.window) {
   
     function loadCache() {
       cached = true;
-      fetch('manifest.json').then(js => JSON.parse(js)).then(
+      fetch('manifest.json').then(response => response.json()).then(
         files => caches.open(cacheName).then(c => c.addAll(files))
       );
     }
